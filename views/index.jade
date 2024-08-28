@@ -1,0 +1,260 @@
+link(rel='stylesheet', href='/bootstrap/css/bootstrap.min.css')
+link(rel='stylesheet', href='/bootstrap/css/bootstrap-responsive.css')
+link(rel='stylesheet', type='text/css', href='css/style.css')
+link(rel='stylesheet', type='text/css', href='css/nsstubbstyle.css')
+
+script(src='/javascripts/jquery.js')
+script(src='/javascripts/nsstubb.js')
+script(src='/bootstrap/js/bootstrap.min.js')
+script(src='/bootbox/js/bootbox.min.js')
+script(src='/socket.io/socket.io.js')
+
+
+.navbar.navbar-fixed-top
+  .navbar-inner
+    .container
+      a.brand(href="#")= title
+      .nav-collapse
+        ul.nav
+          //li.active
+          //  a(href="#")<i class="icon-user icon-white"></i> Home
+          li
+            a(href="#stats") <i class="icon-info-sign icon-white"></i> Activity
+          li
+            a(href="#contact") <i class="icon-envelope icon-white"></i> Contact
+.container(id='heroUnit')  
+  .hero-unit
+    img(src='/img/title.png', width='60%', height='60%')
+    P Stub RESTful requests for your RESTful UI.
+  
+  .btn-toolbar
+    .btn-group()
+        a.btn(id='modfyButton', href='#', class='active') Modify Route
+        a.btn(id='addButton', href='#', style='color: #49AC54') Add GET Response
+        a.btn(id='addPOSTResponse', href='#', style='color: #CD9A00') Add POST Response
+  p
+  div(style='')
+    form(id='updateform', method='post', action='')
+      fieldset
+          .container(id='modifyRoute')
+            label Route
+            select(id='selectroute', class='nsstubb-select', name='route')
+              option(value='--select route--') <i class="icon-info-sign icon-white"></i> Select route to modify
+              each route, i in routes
+                option(value=route) #{route}
+            .container(id='httpmethod', class='nsstubb-httpmethod')
+              label(id='httpmethodlabel', class='nsstubb-label nsstubb-get') GET
+
+          .container(id='addRoute')
+            label New Route
+            input(id='newRouteInput', name='newroute', type='text', placeholder='Add new route here (/PATH1/PATH2/ENDPOINT) leave out the \'?\'')
+          p
+          textarea(id='routeResponseStatic', rows='10', name='routedata', placeholder='{ "valid JSON":true }')
+          input#hiddenaction(type='hidden', name='action', value='/updateroute')
+          input#hiddenhttpmethod(type='hidden', name='httpmethod', value='GET')
+          imput#hiddenmodalaction(type='hidden', name='modalaction', value='close')
+          input#hiddendelay(type='hidden', name='delay', value='false')
+          p
+          .controls.controls-row(style='margin-bottom: 5px;')
+            label.control-label(for='timedelay', style='margin: 0; float: left;') Simulated Time Delay (ms)
+
+          .controls.controls-row
+            .btn-group(id='toggleDelayGroup', data-toggle='buttons-radio')
+              button.btn.btn-primary(id='delayToggleOn', type='button') ON
+              button.btn.btn-primary(id='delayToggleOff', type='button', class='active') OFF 
+            input#timedelay(name='delayms', id='timeDelayField', type='text', placeholder='delay in ms', style='width: 200px; margin-bottom: 0; margin-left: 10px;')
+            span#warningLabel.label.label-success(style='margin-left: 10px;', class='hidden') Time delay activated
+
+
+    .well.well-large(style='box-shadow: inset 0 0 0; -webkit-box-shadow: inset 0 0 0;')
+      .controls.controls-row
+          button.btn.btn-large.btn-primary(id='updateSubmitButton', class='pull-right', type='submit', action='update', data-loading-text="Updating...", style='width: 200px') Update
+          button.btn.btn-large.btn-primary(id='deleteSubmitButton', class='btn btn-danger space pull-right', action='delete', style='width: 200px') Delete...
+          button.btn.btn-large.btn-primary(id='addSubmitButton', type='submit', action='add', class='pull-right', style='width: 200px') Add
+
+  a#stats
+  
+  h4 Activity 
+    span.badge(id='activitynumber') 0
+  
+  hr
+  div(style='height:420px; overflow:hidden; overflow-y:scroll;')
+    table#streamTable(width='100%', border='0', class='activitytable')
+      
+  hr
+    
+
+  #deleteConfirmModal.modal.hide.fade
+    .modal-header
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+        h3 Confirm Delete
+      .modal-body
+        p Are you sure you want to delete this route, there's no going back!
+      .modal-footer
+        a.btn(id='deleteConfirmModalCloseButton', href='#') Cancel
+        a.btn.btn-primary(id='deleteConfirmModalDeleteButton', href='#', class='btn btn-danger') Delete    
+
+
+  script.
+      //Get the port from the URL.
+      var lastIndex = document.URL.lastIndexOf(':');
+      var firstIndex = document.URL.lastIndexOf('http://');
+      
+      var ipAddress = document.URL.substring(firstIndex+7, lastIndex);
+      var portExtracted = document.URL.substring(lastIndex+1, lastIndex+5);
+      var address = "http://" + ipAddress;
+      var socket = io.connect(address,{"port":portExtracted});
+      socket.emit('my other event', { my: 'data' });
+      socket.on('nsstubb_connected', function (data) {
+        $('#serverStream').val($('#serverStream').val() + data.message + ' ' + data.port + "\n");
+      });
+      socket.on('activity', function (data) {
+        //bootbox.alert(data.ui + ' -> ' + data.activity);
+        $('#activitynumber').text(parseInt($('#activitynumber').text()) + 1);
+        addRow('streamTable', data);
+      });  
+
+script.
+  //initial setup...  
+  $('#addRoute').hide();
+  $('#addSubmitButton').hide();
+  $('#httpmethodlabel').hide();
+  
+  disableAllButtons(true);
+  
+  $('#selectroute').change(function(){
+    viewRouteJSON();
+  });
+
+  $('#updateform').submit(function(){
+    var urlaction = $('#hiddenaction').val();
+
+    $.ajax({
+      type: "POST",
+      url: urlaction,
+      data: $( "#updateform" ).serializeArray(),
+      success: function(data){
+        if (urlaction == '/deleteroute'){
+          //handle a successful route deletion
+          $("#selectroute").find('option:selected').remove();
+          var routeTag = 'route=';
+          $.ajax({
+            type: "GET",
+            url: "/routedata",
+            data: routeTag+$('#selectroute').val(),
+            success: function(data){
+              $('#routeResponseStatic').val(data.data);
+              setHttpMethod(data.httpmethod); 
+              setDelayToggleState(data.delay);
+              $('#timeDelayField').val(data.delayms);
+          }
+          });
+        }else if (urlaction == '/updateroute'){
+          $('#updateSubmitButton').button('reset');
+          //handle a successful route update.
+        }else{
+          //handle a successful route addition...
+          var newRoute = $("#newRouteInput").val();
+          $("#selectroute").append('<option value='+newRoute+'>'+newRoute+'</option>');
+          $('#routeResponseStatic').val(''); 
+          $('#newRouteInput').val(''); 
+          setDelayToggleState(false); //switch toggle to OFF position
+          $('#timeDelayField').val(0);
+          bootbox.alert('Route sucessfully added'); 
+        }   
+      },
+      error: function(jqXHR, textStatus, errorThrown){
+        $('#updateSubmitButton').button('reset');
+        bootbox.alert("Sorry, that route's already taken.\nBetter luck next time!");
+      }
+    });
+     return false;
+  });
+
+  //The 'Modify Route' button is pressed.
+  $('#modfyButton').click(function(){
+    toggleModifyRoute();
+  });
+
+  //The 'Add GET Response' button is pressed.
+  $('#addButton').click(function(){
+    $('#hiddenhttpmethod').val('GET');
+    toggleAddRoute(); 
+  });
+
+  //The 'Add POST Response' button is pressed.
+  $('#addPOSTResponse').click(function(){
+    $('#hiddenhttpmethod').val('POST');
+    toggleAddPOSTResponse(); 
+  });
+
+  //set the action for the form when delete button is clicked.
+  $('#deleteSubmitButton').click(function(){
+    getConfirm(function(result) {
+      if(result == true){
+        $('#hiddenaction').val('/deleteroute');
+        $('#updateform').submit();
+      }else{
+        console.log('DO NOT DELETE');
+      }
+    });
+    
+  });
+
+
+  //set the action for the form when update button is clicked.
+  $('#updateSubmitButton').click(function(){
+    $('#hiddenaction').val('/updateroute');
+    $('#updateSubmitButton').button('loading');
+    $('#updateform').submit();
+  });
+
+  //set the action for the form when main "Add" button is clicked.
+  $('#addSubmitButton').click(function(){
+
+    if($('#newRouteInput').val() === ""){
+      bootbox.alert("Sorry, you must provide a route!");
+    }else if($('#routeResponseStatic').val() === ""){
+      bootbox.alert("Sorry, you must provide some data for the response!");
+    }else{
+      $('#hiddenaction').val('/addroute');
+      $('#updateform').submit();
+    }
+  });
+
+  //delay toggle (ON) button is clicked.
+  $('#delayToggleOn').click(function(){
+    if($('#timeDelayField').val() == ''){
+      $('#timeDelayField').val(0);
+    }
+    $('#hiddendelay').val(true);
+    $("#warningLabel").fadeOut(0, function(){
+      $("#warningLabel").removeClass('hidden');
+    });
+
+    //only allow ajax if modifying.
+    if($('#addSubmitButton').is(':hidden')){
+      toggleDelay(true);
+    }
+  });
+
+  //delay toggle (OFF) button is clicked.
+  $('#delayToggleOff').click(function(){
+    $('#hiddendelay').val(false);
+
+    //only allow ajax if modifying.
+    if($('#addSubmitButton').is(':hidden')){
+      toggleDelay(false);
+    }
+  });
+
+  //tooltips
+  $('#deleteSubmitButton').tooltip({title:'Delete selected route', delay:{show: 800, hide:100}, placement:'bottom'});
+  $('#addSubmitButton').tooltip({title:'Add new route', delay:{show: 800, hide:100}, placement:'bottom'});
+  $('#updateSubmitButton').tooltip({title:'Update selected route', delay:{show: 800, hide:100}, placement:'bottom'});
+  //$('#delayToggleOff').tooltip({title:'Toggle simulated delay off', delay:{show: 800, hide:100}, placement:'bottom'});
+  //$('#delayToggleOn').tooltip({title:'Toggle simulated delay on', delay:{show: 800, hide:100}, placement:'bottom'});
+  $('#timeDelayField').tooltip({title:'Delay in ms', delay:{show: 800, hide:100}, placement:'bottom'});
+  $('#modfyButton').tooltip({title:'Modify routes', delay:{show: 800, hide:100}, placement:'top'});
+  $('#addButton').tooltip({title:'Add new GET response', delay:{show: 800, hide:100}, placement:'top'});
+  $('#addPOSTResponse').tooltip({title:'Add new POST response', delay:{show: 800, hide:100}, placement:'top'});

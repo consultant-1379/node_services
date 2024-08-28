@@ -1,0 +1,80 @@
+.textareastream {
+  color: #8DC653;
+  background-color : transparent;
+  border-color: #8DC653;
+}
+
+.activitybutton {
+	width: 60px !important;
+}
+
+.nsstubb-select{
+	width:862px;
+	float: left;
+}
+
+.nsstubb-label{
+	color:white;
+	text-align: center;
+	vertical-align: middle;
+	line-height: 30px;
+	border-radius: 4px;
+}
+
+.nsstubb-get{
+	background-color: #49AC54;
+}
+
+.nsstubb-post{
+	background-color: #CD9A00;
+}
+
+.nsstubb-httpmethod{
+	width: 68px;
+	/*background-color: green;*/
+	display: inline-block;
+	margin-left: 10px;
+	font-size: inherit;
+	text-align: center;
+	vertical-align: middle;
+}
+
+.selected-add-label{
+	border-radius: 10px;
+	background-color: #5FB760;
+	height: 30px;
+	color: white;
+}
+
+.selected-view-label{
+	border-radius: 10px;
+	background-color: #999999;
+	height: 30px;
+	color: white;
+}
+
+table{
+	overflow-y: hidden;
+	overflow-x:none;
+	overflow-y:scroll;
+}
+
+table, tr{
+	height: 40px;
+}
+
+table, td{
+	text-align:left;
+	padding-left: 10px;
+}
+
+table tr td:first-child {
+    width: 165px;
+    padding-left: 0;
+}
+
+table tr td:last-child {
+    width: 80px;
+    text-align: left;
+    padding-left: 10px;
+}
